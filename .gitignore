@@ -1,0 +1,32 @@
+# ── Tudo que é de um vídeo específico fica fora do repositório ─────────────────────────────
+# Cada vídeo mora em projetos/<nome>/ (criado por ferramentas/novo-video.py): fatos da empresa, roteiro,
+# vozes, músicas, clipes, prévias, entregas, gastos. É material pessoal/da empresa e pesado.
+/projetos/
+/analise-*/
+
+# ── Mídia e gerados, em qualquer lugar ────────────────────────────────────────────────────
+*.mp4
+*.mov
+*.mkv
+*.webm
+*.wav
+*.mp3
+*.m4a
+*.ogg
+*.srt
+**/out/
+**/dist/
+**/node_modules/
+**/.remotion/
+
+# exceção: nada de mídia é ignorado dentro de exemplos pequenos do guia
+!guia/exemplos/**
+
+# ── Segredos e lixo do sistema ────────────────────────────────────────────────────────────
+.env
+.env.*
+*.pem
+.DS_Store
+Thumbs.db
+__pycache__/
+*.pyc

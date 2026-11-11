@@ -1,0 +1,22 @@
+{
+  "_ajuda": "Troque pelas cores e pela fonte da marca do vídeo (veja fatos.md). Nenhum componente usa cor fixa: tudo vem daqui.",
+  "nome": "Marca de exemplo",
+  "fonte": "Inter",
+  "cores": {
+    "principal": "#1e2041",
+    "principalEscuro": "#14152e",
+    "principalProfundo": "#0c0d1f",
+    "destaque": "#d51217",
+    "destaqueNoEscuro": "#ff5a5f",
+    "sucesso": "#1b7a4f",
+    "alerta": "#d9771c",
+    "fundoClaro": "#f4f6fb",
+    "superficie": "#ffffff",
+    "superficieAlta": "#eef1f8",
+    "borda": "#d5dae8",
+    "texto": "#1a1c36",
+    "textoSuave": "#5a5f7a",
+    "branco": "#ffffff"
+  },
+  "video": { "largura": 1920, "altura": 1080, "fps": 30 }
+}
