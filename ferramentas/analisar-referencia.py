@@ -3,6 +3,12 @@
 
 Uso:
     python ferramentas/analisar-referencia.py caminho/do/video.mp4 [--saida pasta] [--nome slug]
+    python ferramentas/analisar-referencia.py https://link-do-video [--saida pasta]      # baixa com yt-dlp e analisa
+
+Com um LINK, o vídeo é baixado (até 1080p) para <saida>/fonte/, junto com as legendas automáticas/oficiais do próprio
+vídeo (.srt), que viram a transcrição (sem precisar do whisper), e um fonte.md com título, canal, data e a URL.
+Precisa de `pip install yt-dlp`. Baixe só vídeos que você tem direito de analisar; a referência serve de MOLDE
+(estrutura, ritmo, passagens), nunca para copiar marca, texto, música, imagem ou voz.
 
 Saída (por padrão em projetos/<projeto>/referencias/<nome>/ se existir, senão ./analise-<nome>/):
     analise.md        números medidos (duração, ritmo de cortes, volume, quadros pretos/parados, cores, fala)
@@ -36,6 +42,68 @@ FF = achar_ffmpeg()
 
 def rodar(args, **kw):
     return subprocess.run([FF, "-hide_banner", "-nostdin", *args], capture_output=True, text=True, encoding="utf-8", errors="replace", **kw)
+
+
+def eh_link(x):
+    return re.match(r"^https?://", x or "") is not None
+
+
+def baixar(url, pasta):
+    """Baixa o vídeo e as legendas com yt-dlp; devolve (caminho do mp4, dict com metadados, caminho do srt ou None)."""
+    os.makedirs(pasta, exist_ok=True)
+    cmd = [sys.executable, "-m", "yt_dlp"]
+    if subprocess.run(cmd + ["--version"], capture_output=True).returncode:
+        if shutil.which("yt-dlp"):
+            cmd = ["yt-dlp"]
+        else:
+            sys.exit("yt-dlp não encontrado. Instale com: pip install yt-dlp")
+    args = cmd + ["--no-playlist", "-f", "bv*[height<=1080]+ba/b[height<=1080]/b", "--merge-output-format", "mp4",
+                  "--write-info-json", "--write-subs", "--write-auto-subs", "--sub-langs", "pt.*,en.*", "--convert-subs", "srt",
+                  "--ffmpeg-location", os.path.dirname(FF) or ".", "-o", os.path.join(pasta, "referencia.%(ext)s"), url]
+    print("→ baixando a referência…")
+    r = subprocess.run(args, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    mp4 = os.path.join(pasta, "referencia.mp4")
+    if r.returncode or not os.path.exists(mp4):
+        sys.exit("Não consegui baixar o vídeo (link privado, restrito ou indisponível?):\n" + r.stderr[-800:])
+    meta = {}
+    try:
+        meta = json.load(open(os.path.join(pasta, "referencia.info.json"), encoding="utf-8"))
+    except Exception:
+        pass
+    srt = None
+    for f in sorted(os.listdir(pasta)):
+        if f.endswith(".srt"):
+            srt = os.path.join(pasta, f)
+            if ".pt" in f:
+                break
+    info_md = ["# Fonte da referência", "", f"- URL: {url}", f"- Título: {meta.get('title', '—')}", f"- Canal: {meta.get('uploader', '—')}",
+               f"- Publicado em: {meta.get('upload_date', '—')}", f"- Baixado em: {__import__('datetime').date.today()}", "",
+               "> Uso: análise de molde (estrutura, ritmo, passagens). Não copiar marca, texto, música, imagem ou voz.", ""]
+    open(os.path.join(pasta, "fonte.md"), "w", encoding="utf-8").write("\n".join(info_md))
+    return mp4, meta, srt
+
+
+def fala_do_srt(srt):
+    """Transcrição a partir de um .srt (legendas do próprio vídeo): devolve o mesmo formato de transcrever()."""
+    texto, palavras, ini, fim = [], 0, None, 0.0
+    for bloco in re.split(r"\n\s*\n", open(srt, encoding="utf-8", errors="replace").read().strip()):
+        ls = bloco.strip().splitlines()
+        if len(ls) < 3:
+            continue
+        m = re.match(r"(\d+):(\d+):(\d+)[,.](\d+)\s*-->\s*(\d+):(\d+):(\d+)[,.](\d+)", ls[1])
+        if not m:
+            continue
+        g = [int(x) for x in m.groups()]
+        a = g[0] * 3600 + g[1] * 60 + g[2] + g[3] / 1000
+        b = g[4] * 3600 + g[5] * 60 + g[6] + g[7] / 1000
+        t = re.sub(r"<[^>]+>", "", " ".join(ls[2:])).strip()
+        if not t or (texto and texto[-1].endswith(t)):
+            continue
+        ini = a if ini is None else ini
+        fim = b
+        palavras += len(t.split())
+        texto.append(f"[{a:6.1f}s] {t}")
+    return {"idioma": "legenda do vídeo", "texto": texto, "palavras": palavras, "span": (fim - ini) if ini is not None else 0}
 
 
 def info(video):
@@ -155,18 +223,25 @@ def transcrever(video):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("video")
+    ap.add_argument("video", help="arquivo de vídeo OU link (https://…)")
     ap.add_argument("--saida")
     ap.add_argument("--nome")
     ap.add_argument("--limiar", type=float, default=0.25, help="sensibilidade dos cortes (0.1 pega mais, 0.4 só os secos)")
     ap.add_argument("--sem-fala", action="store_true", help="não tenta transcrever")
     a = ap.parse_args()
 
-    video = os.path.abspath(a.video)
-    if not os.path.exists(video):
-        sys.exit(f"Não achei {video}")
-    nome = a.nome or re.sub(r"[^a-z0-9]+", "-", os.path.splitext(os.path.basename(video))[0].lower()).strip("-")
-    saida = os.path.abspath(a.saida or f"analise-{nome}")
+    srt_fonte = None
+    if eh_link(a.video):
+        base = os.path.abspath(a.saida or f"analise-{a.nome or 'referencia'}")
+        video, meta, srt_fonte = baixar(a.video, os.path.join(base, "fonte"))
+        nome = a.nome or re.sub(r"[^a-z0-9]+", "-", (meta.get("title") or "referencia").lower()).strip("-")[:50] or "referencia"
+        saida = base
+    else:
+        video = os.path.abspath(a.video)
+        if not os.path.exists(video):
+            sys.exit(f"Não achei {video}")
+        nome = a.nome or re.sub(r"[^a-z0-9]+", "-", os.path.splitext(os.path.basename(video))[0].lower()).strip("-")
+        saida = os.path.abspath(a.saida or f"analise-{nome}")
     os.makedirs(saida, exist_ok=True)
 
     print("→ lendo o arquivo…")
@@ -190,7 +265,9 @@ def main():
     print("→ paleta…")
     pal = paleta(video, D)
     fala = None
-    if inf["audio"] and not a.sem_fala:
+    if srt_fonte:
+        fala = fala_do_srt(srt_fonte)
+    elif inf["audio"] and not a.sem_fala:
         print("→ transcrevendo (se o faster-whisper estiver instalado)…")
         fala = transcrever(video)
 

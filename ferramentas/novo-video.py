@@ -5,7 +5,10 @@ Uso:
     python ferramentas/novo-video.py nome-do-video
 
 Cria `projetos/<nome>/` (que o .gitignore deixa de fora do repositório) com:
-    fatos.md, direcoes.md, roteiro.md, estado.md, pedidos.md, decisoes.md, gastos.md, licencas.md  (do modelo)
+    CLAUDE.md (o agente principal vira o "diretor"), fatos.md, direcoes.md, roteiro.md, estado.md, pedidos.md,
+    decisoes.md, gastos.md, licencas.md  (do modelo)
+    .claude/agents/ ← a equipe: analista-de-referencia, pesquisador-de-fatos, roteirista, leitor-cego,
+                       designer-de-motion, diretor-de-ia, produtor-de-som, montador, revisor-final
     referencias/   ← ponha aqui os vídeos de referência e rode analisar-referencia.py
     telas/  ia/  som/  montagem/  entrega/  anteriores/
     motion/        ← cópia do motor Remotion (rode `npm install` dentro dela uma vez)
@@ -28,11 +31,13 @@ def main():
     for p in ["referencias", "telas", "ia", "som", "montagem", "entrega", "anteriores"]:
         os.makedirs(os.path.join(destino, p))
     shutil.copytree(os.path.join(RAIZ, "motor"), os.path.join(destino, "motion"), ignore=shutil.ignore_patterns("node_modules", "out", "dist"))
+    # a equipe de agentes (Claude Code lê .claude/agents/ do projeto)
+    shutil.copytree(os.path.join(RAIZ, "agentes"), os.path.join(destino, ".claude", "agents"))
     print(f"Projeto criado em {destino}\n\nPróximos passos:\n"
           f"  1. cd projetos/{nome}/motion && npm install\n"
           f"  2. coloque o vídeo de referência em projetos/{nome}/referencias/\n"
-          f"  3. python ferramentas/analisar-referencia.py projetos/{nome}/referencias/<video>.mp4 --saida projetos/{nome}/referencias/<video>-analise\n"
-          f"  4. abra o Claude Code na pasta do projeto e siga o README (passo 2).")
+          f"  3. (opcional) python ferramentas/analisar-referencia.py <link ou arquivo> --saida projetos/{nome}/referencias/ref-analise\n"
+          f"  4. cd projetos/{nome} && claude   → peça o vídeo; o diretor chama a equipe (veja guia/06-agentes.md).")
 
 
 if __name__ == "__main__":

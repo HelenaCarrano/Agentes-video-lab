@@ -4,8 +4,12 @@ A forma mais rápida de acertar o estilo é imitar o **molde** de um vídeo de q
 
 ## 1. Gere as medidas
 ```bash
+# por link (baixa com yt-dlp e usa as legendas do próprio vídeo)
+python ferramentas/analisar-referencia.py https://… --saida projetos/<nome>/referencias/ref-analise
+# ou por arquivo
 python ferramentas/analisar-referencia.py projetos/<nome>/referencias/ref.mp4 --saida projetos/<nome>/referencias/ref-analise
 ```
+Com link, precisa de `pip install yt-dlp`; o vídeo, as legendas e um `fonte.md` (URL, título, data) ficam em `ref-analise/fonte/`. No fluxo com agentes, quem faz tudo isto é o `analista-de-referencia` (`guia/06-agentes.md`).
 Para vários vídeos, rode um por vez com `--nome` e compare os `analise.md`. Se o vídeo tem fala e há `faster-whisper`, a transcrição e o ritmo (palavras/s) saem juntos. Sem ele, use `--sem-fala` ou transcreva à mão.
 
 ## 2. Leia a folha (o agente faz isto)
