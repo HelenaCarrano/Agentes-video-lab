@@ -13,4 +13,4 @@
 11. **Nada do que foi pedido se perde.** Mantenha `pedidos.md`: cada pedido vira um item. Releia antes de cada parada.
 12. **Voz de pessoa real só com autorização clara.** Clonar uma voz exige que a própria dona ou dono da voz autorize e aceite os termos do serviço; registre em `licencas.md`.
 13. **Versão aprovada é congelada.** Quando quem aprova disser "não altere mais nada", anote em `decisoes.md` e só mexa no que for pedido explicitamente.
-14. **Nunca `git push`.** O agente pode commitar localmente se pedirem; publicar é decisão de quem é dono do repositório.
+14. **Nunca `git push` por conta própria.** O agente pode commitar localmente se pedirem; publicar só quando a pessoa dona do repositório pedir explicitamente.
